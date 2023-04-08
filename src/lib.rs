@@ -1,5 +1,4 @@
 mod rir {
-    use ndarray;
     use std::f64::consts::PI;
 
     extern crate derive_builder;
@@ -113,12 +112,13 @@ mod rir {
         n_order: i64,
         microphone_angle: &Angle,
         is_highpass_filter: bool,
-    ) -> ndarray::Array2<f64> {
+    ) -> Vec<Vec<f64>> {
         // Temporary variables and constants (image-method)
         let fc = 0.5; // The normalized cut-off frequency equals (fs/2) / fs = 0.5
         let tw = (2.0 * (0.004 * fs).round()) as usize; // The width of the low-pass FIR equals 8 ms
         let cts = c / fs;
-        let mut imp = ndarray::Array::zeros((rr.len(), n_samples));
+        let mut imp = vec![vec![0.0; n_samples]; rr.len()];
+        // let mut imp = ndarray::Array::zeros((rr.len(), n_samples));
 
         let s = Position {
             x: ss.x / cts,
@@ -203,7 +203,7 @@ mod rir {
                                                 (fdist - (tw as f64 / 2.0) + 1.0) as usize;
                                             for n in 0..tw {
                                                 if start_position + n < n_samples {
-                                                    imp[[idx_microphone, start_position + n]] +=
+                                                    imp[idx_microphone][start_position + n] +=
                                                         gain * lpi[n];
                                                 }
                                             }
@@ -227,11 +227,11 @@ mod rir {
                 let mut y = [0.0; 3];
 
                 for idx in 0..n_samples {
-                    let x0 = imp[[idx_microphone, idx]];
+                    let x0 = imp[idx_microphone][idx];
                     y[2] = y[1];
                     y[1] = y[0];
                     y[0] = b1 * y[1] + b2 * y[2] + x0;
-                    imp[[idx_microphone, idx]] = y[0] + a1 * y[1] + r1 * y[2];
+                    imp[idx_microphone][idx] = y[0] + a1 * y[1] + r1 * y[2];
                 }
             }
         }
