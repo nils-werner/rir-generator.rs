@@ -50,7 +50,7 @@ mod rir {
         pub y: f64,
         pub z: f64,
     }
-    pub type Length = Position;
+    pub type Room = Position;
 
     // trait FromArray for Position{
     //     fn from_array(arr: &[f64]) -> Position {
@@ -125,7 +125,7 @@ mod rir {
             y: ss.y / cts,
             z: ss.z / cts,
         };
-        let l = Length {
+        let l = Room {
             x: ll.x / cts,
             y: ll.y / cts,
             z: ll.z / cts,
@@ -146,7 +146,7 @@ mod rir {
             for mx in -n1..=n1 {
                 for my in -n2..=n2 {
                     for mz in -n3..=n3 {
-                        let rm = Length {
+                        let rm = Room {
                             x: 2.0 * mx as f64 * l.x,
                             y: 2.0 * my as f64 * l.y,
                             z: 2.0 * mz as f64 * l.z,
@@ -155,7 +155,7 @@ mod rir {
                         for q in 0..=1 {
                             for j in 0..=1 {
                                 for k in 0..=1 {
-                                    let rp_plus_rm = Length {
+                                    let rp_plus_rm = Room {
                                         x: (1 - 2 * q) as f64 * s.x - r.x + rm.x,
                                         y: (1 - 2 * j) as f64 * s.y - r.y + rm.y,
                                         z: (1 - 2 * k) as f64 * s.z - r.z + rm.z,
@@ -260,7 +260,7 @@ mod tests {
                 y: 3.5,
                 z: 2.0,
             },
-            &Length {
+            &Room {
                 x: 5.0,
                 y: 4.0,
                 z: 6.0,
