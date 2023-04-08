@@ -1,28 +1,6 @@
 mod rir {
     use std::f64::consts::PI;
 
-    extern crate derive_builder;
-
-    // #[derive(Default, Builder, Debug)]
-    // #[builder(setter(into))]
-    // struct RIR {
-    //     rr: &Vec<Position>,
-    //     ss: &Position,
-    //     ll: &Position,
-    //     beta: &Betas,
-    //     microphone_type: &Microphone,
-    //     n_order: i64,
-    //     microphone_angle: &Angle,
-    //     #[builder(default = 340)]
-    //     c: f64,
-    //     #[builder(default = 16000)]
-    //     fs: f64,
-    //     #[builder(default = 4096)]
-    //     n_samples: usize,
-    //     #[builder(default = true)]
-    //     is_highpass_filter: bool
-    // }
-
     #[derive(Debug)]
     pub enum Microphone {
         Bidirectional,
@@ -51,12 +29,6 @@ mod rir {
         pub z: f64,
     }
     pub type Room = Position;
-
-    // trait FromArray for Position{
-    //     fn from_array(arr: &[f64]) -> Position {
-    //         Position{ x: arr[0], y: arr[1], z: arr[2]}
-    //     }
-    // }
 
     #[derive(Debug)]
     pub struct Betas {
