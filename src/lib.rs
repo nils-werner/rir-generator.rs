@@ -65,6 +65,16 @@ mod rir {
         pub z: [f64; 2],
     }
 
+    impl Betas {
+        pub fn from_scalar(x: f64) -> Betas {
+            Betas {
+                x: [x, x],
+                y: [x, x],
+                z: [x, x],
+            }
+        }
+    }
+
     #[derive(Debug)]
     pub struct Angle {
         pub phi: f64,
@@ -246,7 +256,7 @@ mod tests {
 
     #[test]
     fn test_example() {
-        let _ = compute_rir(
+        let imp = compute_rir(
             340.0,
             16000.0,
             &vec![Position {
@@ -265,11 +275,7 @@ mod tests {
                 y: 4.0,
                 z: 6.0,
             },
-            &Betas {
-                x: [0.4, 0.4],
-                y: [0.4, 0.4],
-                z: [0.4, 0.4],
-            },
+            &Betas::from_scalar(0.4),
             &Microphone::Omnidirectional,
             -1,
             &Angle {
@@ -278,5 +284,10 @@ mod tests {
             },
             true,
         );
+
+        assert!(imp
+            .iter()
+            .map(|inner| inner.iter().any(|&x| x > 0.0))
+            .all(|x| x))
     }
 }
