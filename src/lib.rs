@@ -1,7 +1,7 @@
 mod rir {
     use std::f64::consts::PI;
 
-    #[derive(Debug)]
+    #[derive(Debug, Clone)]
     pub enum Microphone {
         Bidirectional,
         Hypercardioid,
@@ -10,14 +10,26 @@ mod rir {
         Omnidirectional,
     }
 
-    impl Microphone {
-        fn value(&self) -> f64 {
-            match *self {
+    impl Into<f64> for Microphone {
+        fn into(self) -> f64 {
+            match self {
                 Self::Bidirectional => 0.0,
                 Self::Hypercardioid => 0.25,
                 Self::Cardioid => 0.5,
                 Self::Subcardioid => 0.75,
                 Self::Omnidirectional => 1.0,
+            }
+        }
+    }
+
+    impl From<char> for Microphone {
+        fn from(x: char) -> Microphone {
+            match x {
+                'b' => Self::Bidirectional,
+                'h' => Self::Hypercardioid,
+                'c' => Self::Cardioid,
+                's' => Self::Subcardioid,
+                _ => Self::Omnidirectional,
             }
         }
     }
@@ -30,15 +42,25 @@ mod rir {
     }
     pub type Room = Position;
 
-    #[derive(Debug)]
+    impl From<&[f64; 3]> for Position {
+        fn from(x: &[f64; 3]) -> Position {
+            Position {
+                x: x[0],
+                y: x[1],
+                z: x[2],
+            }
+        }
+    }
+
+    #[derive(Debug, Clone)]
     pub struct Betas {
         pub x: [f64; 2],
         pub y: [f64; 2],
         pub z: [f64; 2],
     }
 
-    impl Betas {
-        pub fn from_scalar(x: f64) -> Betas {
+    impl From<f64> for Betas {
+        fn from(x: f64) -> Betas {
             Betas {
                 x: [x, x],
                 y: [x, x],
@@ -47,10 +69,35 @@ mod rir {
         }
     }
 
-    #[derive(Debug)]
+    impl From<&[f64; 6]> for Betas {
+        fn from(x: &[f64; 6]) -> Betas {
+            Betas {
+                x: [x[0], x[1]],
+                y: [x[2], x[3]],
+                z: [x[4], x[5]],
+            }
+        }
+    }
+
+    #[derive(Debug, Clone)]
     pub struct Angle {
         pub phi: f64,
         pub theta: f64,
+    }
+
+    impl From<f64> for Angle {
+        fn from(x: f64) -> Angle {
+            Angle { phi: x, theta: x }
+        }
+    }
+
+    impl From<&[f64; 2]> for Angle {
+        fn from(x: &[f64; 2]) -> Angle {
+            Angle {
+                phi: x[0],
+                theta: x[1],
+            }
+        }
     }
 
     trait FloatSinc {
@@ -71,7 +118,7 @@ mod rir {
         match t {
             Microphone::Hypercardioid => 1.0,
             _ => {
-                let rho = t.value();
+                let rho: f64 = t.clone().into();
                 let vartheta = (p.z / (p.x.powi(2) + p.y.powi(2) + p.z.powi(2)).sqrt()).acos();
                 let varphi = p.y.atan2(p.x);
 
@@ -236,27 +283,12 @@ mod tests {
         let imp = compute_rir(
             340.0,
             16000.0,
-            &vec![Position {
-                x: 2.0,
-                y: 1.5,
-                z: 2.0,
-            }],
-            &Position {
-                x: 2.0,
-                y: 3.5,
-                z: 2.0,
-            },
-            &Room {
-                x: 5.0,
-                y: 4.0,
-                z: 6.0,
-            },
-            &Betas::from_scalar(0.4),
+            &vec![Position::from(&[2.0, 1.5, 2.0])],
+            &Position::from(&[2.0, 3.5, 2.0]),
+            &Room::from(&[5.0, 4.0, 6.0]),
+            &Betas::from(0.4),
             &vec![Microphone::Omnidirectional],
-            &vec![Angle {
-                phi: 0.0,
-                theta: 0.0,
-            }],
+            &vec![Angle::from(0.0)],
             4096,
             -1,
             true,
