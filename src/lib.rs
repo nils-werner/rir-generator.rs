@@ -199,23 +199,26 @@ mod rir {
                     }
                 }
             }
+        }
 
+        if enable_highpass_filter {
             // 'Original' high-pass filter as proposed by Allen and Berkley.
-            if enable_highpass_filter {
-                // Temporary variables and constants (high-pass filter)
-                let w = 2.0 * PI * 100.0 / fs; // The cut-off frequency equals 100 Hz
-                let r1 = -w.exp();
-                let b1 = 2.0 * r1 * w.cos();
-                let b2 = -r1 * r1;
-                let a1 = -(1.0 + r1);
+            // Temporary variables and constants (high-pass filter)
+            let w = 2.0 * PI * 100.0 / fs; // The cut-off frequency equals 100 Hz
+            let r1 = -w.exp();
+            let b1 = 2.0 * r1 * w.cos();
+            let b2 = -r1 * r1;
+            let a1 = -(1.0 + r1);
+
+            for (i, _) in receivers.iter().enumerate() {
                 let mut y = [0.0; 3];
 
-                for idx in 0..n_samples {
-                    let x0 = imp[i][idx];
+                for n in 0..n_samples {
+                    let x0 = imp[i][n];
                     y[2] = y[1];
                     y[1] = y[0];
                     y[0] = b1 * y[1] + b2 * y[2] + x0;
-                    imp[i][idx] = y[0] + a1 * y[1] + r1 * y[2];
+                    imp[i][n] = y[0] + a1 * y[1] + r1 * y[2];
                 }
             }
         }
