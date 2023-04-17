@@ -85,62 +85,61 @@ mod rir {
     pub fn compute_rir(
         c: f64,
         fs: f64,
-        rr: &Vec<Position>,
-        n_samples: usize,
-        ss: &Position,
-        ll: &Position,
+        receivers: &[Position],
+        source: &Position,
+        room: &Room,
         beta: &Betas,
         microphone_type: &Microphone,
-        n_order: i64,
         microphone_angle: &Angle,
-        is_highpass_filter: bool,
+        n_samples: usize,
+        n_order: i64,
+        enable_highpass_filter: bool,
     ) -> Vec<Vec<f64>> {
         // Temporary variables and constants (image-method)
         let fc = 0.5; // The normalized cut-off frequency equals (fs/2) / fs = 0.5
         let tw = (2.0 * (0.004 * fs).round()) as usize; // The width of the low-pass FIR equals 8 ms
         let cts = c / fs;
-        let mut imp = vec![vec![0.0; n_samples]; rr.len()];
-        // let mut imp = ndarray::Array::zeros((rr.len(), n_samples));
+        let mut imp = vec![vec![0.0; n_samples]; receivers.len()];
 
-        let s = Position {
-            x: ss.x / cts,
-            y: ss.y / cts,
-            z: ss.z / cts,
+        let source = Position {
+            x: source.x / cts,
+            y: source.y / cts,
+            z: source.z / cts,
         };
-        let l = Room {
-            x: ll.x / cts,
-            y: ll.y / cts,
-            z: ll.z / cts,
+        let room = Room {
+            x: room.x / cts,
+            y: room.y / cts,
+            z: room.z / cts,
         };
 
-        for (idx_microphone, r) in rr.iter().enumerate() {
-            let r = Position {
-                x: r.x / cts,
-                y: r.y / cts,
-                z: r.z / cts,
+        for (i, receiver) in receivers.iter().enumerate() {
+            let receiver = Position {
+                x: receiver.x / cts,
+                y: receiver.y / cts,
+                z: receiver.z / cts,
             };
 
-            let n1 = (n_samples as f64 / (2.0 * l.x)).ceil() as i64;
-            let n2 = (n_samples as f64 / (2.0 * l.y)).ceil() as i64;
-            let n3 = (n_samples as f64 / (2.0 * l.z)).ceil() as i64;
+            let n1 = (n_samples as f64 / (2.0 * room.x)).ceil() as i64;
+            let n2 = (n_samples as f64 / (2.0 * room.y)).ceil() as i64;
+            let n3 = (n_samples as f64 / (2.0 * room.z)).ceil() as i64;
 
             // Generate room impulse response
             for mx in -n1..=n1 {
                 for my in -n2..=n2 {
                     for mz in -n3..=n3 {
                         let rm = Room {
-                            x: 2.0 * mx as f64 * l.x,
-                            y: 2.0 * my as f64 * l.y,
-                            z: 2.0 * mz as f64 * l.z,
+                            x: 2.0 * mx as f64 * room.x,
+                            y: 2.0 * my as f64 * room.y,
+                            z: 2.0 * mz as f64 * room.z,
                         };
 
                         for q in 0..=1 {
                             for j in 0..=1 {
                                 for k in 0..=1 {
                                     let rp_plus_rm = Room {
-                                        x: (1 - 2 * q) as f64 * s.x - r.x + rm.x,
-                                        y: (1 - 2 * j) as f64 * s.y - r.y + rm.y,
-                                        z: (1 - 2 * k) as f64 * s.z - r.z + rm.z,
+                                        x: (1 - 2 * q) as f64 * source.x - receiver.x + rm.x,
+                                        y: (1 - 2 * j) as f64 * source.y - receiver.y + rm.y,
+                                        z: (1 - 2 * k) as f64 * source.z - receiver.z + rm.z,
                                     };
                                     let refl = [
                                         beta.x[0].powi((mx - q).abs() as i32)
@@ -156,9 +155,11 @@ mod rir {
                                         + rp_plus_rm.z.powi(2))
                                     .sqrt();
 
-                                    if (2 * mx - q).abs() + (2 * my - j).abs() + (2 * mz - k).abs()
-                                        <= n_order
-                                        || n_order == -1
+                                    if n_order == -1
+                                        || (2 * mx - q).abs()
+                                            + (2 * my - j).abs()
+                                            + (2 * mz - k).abs()
+                                            <= n_order
                                     {
                                         let fdist = (dist).floor();
                                         if (fdist as usize) < n_samples {
@@ -185,8 +186,7 @@ mod rir {
                                                 (fdist - (tw as f64 / 2.0) + 1.0) as usize;
                                             for n in 0..tw {
                                                 if start_position + n < n_samples {
-                                                    imp[idx_microphone][start_position + n] +=
-                                                        gain * lpi[n];
+                                                    imp[i][start_position + n] += gain * lpi[n];
                                                 }
                                             }
                                         }
@@ -199,7 +199,7 @@ mod rir {
             }
 
             // 'Original' high-pass filter as proposed by Allen and Berkley.
-            if is_highpass_filter {
+            if enable_highpass_filter {
                 // Temporary variables and constants (high-pass filter)
                 let w = 2.0 * PI * 100.0 / fs; // The cut-off frequency equals 100 Hz
                 let r1 = -w.exp();
@@ -209,11 +209,11 @@ mod rir {
                 let mut y = [0.0; 3];
 
                 for idx in 0..n_samples {
-                    let x0 = imp[idx_microphone][idx];
+                    let x0 = imp[i][idx];
                     y[2] = y[1];
                     y[1] = y[0];
                     y[0] = b1 * y[1] + b2 * y[2] + x0;
-                    imp[idx_microphone][idx] = y[0] + a1 * y[1] + r1 * y[2];
+                    imp[i][idx] = y[0] + a1 * y[1] + r1 * y[2];
                 }
             }
         }
@@ -236,7 +236,6 @@ mod tests {
                 y: 1.5,
                 z: 2.0,
             }],
-            4096,
             &Position {
                 x: 2.0,
                 y: 3.5,
@@ -249,11 +248,12 @@ mod tests {
             },
             &Betas::from_scalar(0.4),
             &Microphone::Omnidirectional,
-            -1,
             &Angle {
                 phi: 0.0,
                 theta: 0.0,
             },
+            4096,
+            -1,
             true,
         );
 
