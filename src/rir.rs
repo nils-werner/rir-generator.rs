@@ -21,14 +21,17 @@ impl Into<f64> for Microphone {
     }
 }
 
-impl From<char> for Microphone {
-    fn from(x: char) -> Microphone {
+impl TryFrom<char> for Microphone {
+    type Error = &'static str;
+
+    fn try_from(x: char) -> Result<Self, Self::Error> {
         match x {
-            'b' => Self::Bidirectional,
-            'h' => Self::Hypercardioid,
-            'c' => Self::Cardioid,
-            's' => Self::Subcardioid,
-            _ => Self::Omnidirectional,
+            'b' => Ok(Self::Bidirectional),
+            'h' => Ok(Self::Hypercardioid),
+            'c' => Ok(Self::Cardioid),
+            's' => Ok(Self::Subcardioid),
+            'o' => Ok(Self::Omnidirectional),
+            _ => Err("Invalid character given"),
         }
     }
 }
