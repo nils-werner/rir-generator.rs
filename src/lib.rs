@@ -89,8 +89,8 @@ mod rir {
         source: &Position,
         room: &Room,
         beta: &Betas,
-        microphone_type: &Microphone,
-        microphone_angle: &Angle,
+        microphone_types: &[Microphone],
+        microphone_angles: &[Angle],
         n_samples: usize,
         n_order: i64,
         enable_highpass_filter: bool,
@@ -112,7 +112,12 @@ mod rir {
             z: room.z / cts,
         };
 
-        for (i, receiver) in receivers.iter().enumerate() {
+        for (i, ((receiver, angle), mtype)) in receivers
+            .iter()
+            .zip(microphone_angles.iter())
+            .zip(microphone_types.iter())
+            .enumerate()
+        {
             let receiver = Position {
                 x: receiver.x / cts,
                 y: receiver.y / cts,
@@ -163,11 +168,8 @@ mod rir {
                                     {
                                         let fdist = (dist).floor();
                                         if (fdist as usize) < n_samples {
-                                            let gain = sim_microphone(
-                                                &rp_plus_rm,
-                                                &microphone_angle,
-                                                &microphone_type,
-                                            ) * refl[0]
+                                            let gain = sim_microphone(&rp_plus_rm, &angle, &mtype)
+                                                * refl[0]
                                                 * refl[1]
                                                 * refl[2]
                                                 / (4.0 * PI * dist * cts);
@@ -247,11 +249,11 @@ mod tests {
                 z: 6.0,
             },
             &Betas::from_scalar(0.4),
-            &Microphone::Omnidirectional,
-            &Angle {
+            &vec![Microphone::Omnidirectional],
+            &vec![Angle {
                 phi: 0.0,
                 theta: 0.0,
-            },
+            }],
             4096,
             -1,
             true,
