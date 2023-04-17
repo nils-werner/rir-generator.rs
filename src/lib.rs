@@ -54,12 +54,12 @@ mod rir {
     }
 
     trait FloatSinc {
-        fn sinc(&self) -> f64;
+        fn sinc(self) -> f64;
     }
 
     impl FloatSinc for f64 {
-        fn sinc(&self) -> f64 {
-            if *self < 1.001 && *self > 0.999 {
+        fn sinc(self) -> f64 {
+            if self < 1.001 && self > 0.999 {
                 1.0
             } else {
                 self.sin() / self
