@@ -102,6 +102,13 @@ impl From<&[f64; 2]> for Angle {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct Receiver {
+    pub position: Position,
+    pub microphone_type: MicrophoneType,
+    pub angle: Angle,
+}
+
 trait FloatSinc {
     fn sinc(self) -> f64;
 }
@@ -134,12 +141,10 @@ fn sim_microphone(p: &Position, a: &Angle, t: &MicrophoneType) -> f64 {
 pub fn compute_rir(
     c: f64,
     fs: f64,
-    receivers: &[Position],
+    receivers: &[Receiver],
     source: &Position,
     room: &Room,
     beta: &Betas,
-    microphone_types: &[MicrophoneType],
-    microphone_angles: &[Angle],
     n_samples: usize,
     n_order: i64,
     enable_highpass_filter: bool,
@@ -161,11 +166,14 @@ pub fn compute_rir(
         z: room.z / cts,
     };
 
-    for (i, ((receiver, angle), mtype)) in receivers
-        .iter()
-        .zip(microphone_angles.iter())
-        .zip(microphone_types.iter())
-        .enumerate()
+    for (
+        i,
+        Receiver {
+            position: receiver,
+            microphone_type: mtype,
+            angle,
+        },
+    ) in receivers.iter().enumerate()
     {
         let receiver = Position {
             x: receiver.x / cts,
@@ -282,12 +290,14 @@ mod tests {
         let imp = compute_rir(
             340.0,
             16000.0,
-            &vec![Position::from(&[2.0, 1.5, 2.0])],
+            &vec![Receiver {
+                position: Position::from(&[2.0, 1.5, 2.0]),
+                microphone_type: MicrophoneType::Omnidirectional,
+                angle: Angle::from(0.0),
+            }],
             &Position::from(&[2.0, 3.5, 2.0]),
             &Room::from(&[5.0, 4.0, 6.0]),
             &Betas::from(0.4),
-            &vec![MicrophoneType::Omnidirectional],
-            &vec![Angle::from(0.0)],
             4096,
             -1,
             true,
