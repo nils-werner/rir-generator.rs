@@ -1,7 +1,7 @@
 use std::f64::consts::PI;
 
 #[derive(Debug, Clone)]
-pub enum Microphone {
+pub enum MicrophoneType {
     Bidirectional,
     Hypercardioid,
     Cardioid,
@@ -9,7 +9,7 @@ pub enum Microphone {
     Omnidirectional,
 }
 
-impl Into<f64> for Microphone {
+impl Into<f64> for MicrophoneType {
     fn into(self) -> f64 {
         match self {
             Self::Bidirectional => 0.0,
@@ -21,7 +21,7 @@ impl Into<f64> for Microphone {
     }
 }
 
-impl TryFrom<char> for Microphone {
+impl TryFrom<char> for MicrophoneType {
     type Error = &'static str;
 
     fn try_from(x: char) -> Result<Self, Self::Error> {
@@ -116,9 +116,9 @@ impl FloatSinc for f64 {
     }
 }
 
-fn sim_microphone(p: &Position, a: &Angle, t: &Microphone) -> f64 {
+fn sim_microphone(p: &Position, a: &Angle, t: &MicrophoneType) -> f64 {
     match t {
-        Microphone::Hypercardioid => 1.0,
+        MicrophoneType::Hypercardioid => 1.0,
         _ => {
             let rho: f64 = t.clone().into();
             let vartheta = (p.z / (p.x.powi(2) + p.y.powi(2) + p.z.powi(2)).sqrt()).acos();
@@ -138,7 +138,7 @@ pub fn compute_rir(
     source: &Position,
     room: &Room,
     beta: &Betas,
-    microphone_types: &[Microphone],
+    microphone_types: &[MicrophoneType],
     microphone_angles: &[Angle],
     n_samples: usize,
     n_order: i64,
@@ -210,9 +210,7 @@ pub fn compute_rir(
                                 .sqrt();
 
                                 if n_order == -1
-                                    || (2 * mx - q).abs()
-                                        + (2 * my - j).abs()
-                                        + (2 * mz - k).abs()
+                                    || (2 * mx - q).abs() + (2 * my - j).abs() + (2 * mz - k).abs()
                                         <= n_order
                                 {
                                     let fdist = (dist).floor();
@@ -288,7 +286,7 @@ mod tests {
             &Position::from(&[2.0, 3.5, 2.0]),
             &Room::from(&[5.0, 4.0, 6.0]),
             &Betas::from(0.4),
-            &vec![Microphone::Omnidirectional],
+            &vec![MicrophoneType::Omnidirectional],
             &vec![Angle::from(0.0)],
             4096,
             -1,
