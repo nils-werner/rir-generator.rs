@@ -115,7 +115,7 @@ trait FloatSinc {
 
 impl FloatSinc for f64 {
     fn sinc(self) -> f64 {
-        if self < 1.001 && self > 0.999 {
+        if self == 0.0 {
             1.0
         } else {
             self.sin() / self
