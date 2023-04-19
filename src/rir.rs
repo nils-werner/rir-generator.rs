@@ -186,72 +186,50 @@ pub fn compute_rir(
         let n3 = (n_samples as f64 / (2.0 * room.z)).ceil() as i64;
 
         // Generate room impulse response
-        for mx in -n1..=n1 {
-            for my in -n2..=n2 {
-                for mz in -n3..=n3 {
-                    let rm = Room {
-                        x: 2.0 * mx as f64 * room.x,
-                        y: 2.0 * my as f64 * room.y,
-                        z: 2.0 * mz as f64 * room.z,
-                    };
+        for (mx, my, mz, q, j, k) in iproduct!(-n1..=n1, -n2..=n2, -n3..=n3, 0..=1, 0..=1, 0..=1) {
+            let rm = Room {
+                x: 2.0 * mx as f64 * room.x,
+                y: 2.0 * my as f64 * room.y,
+                z: 2.0 * mz as f64 * room.z,
+            };
 
-                    for q in 0..=1 {
-                        for j in 0..=1 {
-                            for k in 0..=1 {
-                                let rp_plus_rm = Position {
-                                    x: (1 - 2 * q) as f64 * source.x - receiver.x + rm.x,
-                                    y: (1 - 2 * j) as f64 * source.y - receiver.y + rm.y,
-                                    z: (1 - 2 * k) as f64 * source.z - receiver.z + rm.z,
-                                };
-                                let refl = [
-                                    beta.x[0].powi((mx - q).abs() as i32)
-                                        * beta.x[1].powi((mx).abs() as i32),
-                                    beta.y[0].powi((my - j).abs() as i32)
-                                        * beta.y[1].powi((my).abs() as i32),
-                                    beta.z[0].powi((mz - k).abs() as i32)
-                                        * beta.z[1].powi((mz).abs() as i32),
-                                ];
+            let rp_plus_rm = Position {
+                x: (1 - 2 * q) as f64 * source.x - receiver.x + rm.x,
+                y: (1 - 2 * j) as f64 * source.y - receiver.y + rm.y,
+                z: (1 - 2 * k) as f64 * source.z - receiver.z + rm.z,
+            };
+            let refl = [
+                beta.x[0].powi((mx - q).abs() as i32) * beta.x[1].powi((mx).abs() as i32),
+                beta.y[0].powi((my - j).abs() as i32) * beta.y[1].powi((my).abs() as i32),
+                beta.z[0].powi((mz - k).abs() as i32) * beta.z[1].powi((mz).abs() as i32),
+            ];
 
-                                let dist = (rp_plus_rm.x.powi(2)
-                                    + rp_plus_rm.y.powi(2)
-                                    + rp_plus_rm.z.powi(2))
-                                .sqrt();
-                                let fdist = (dist).floor();
+            let dist = (rp_plus_rm.x.powi(2) + rp_plus_rm.y.powi(2) + rp_plus_rm.z.powi(2)).sqrt();
+            let fdist = (dist).floor();
 
-                                if (fdist as usize) < n_samples
-                                    && (n_order == -1
-                                        || (2 * mx - q).abs()
-                                            + (2 * my - j).abs()
-                                            + (2 * mz - k).abs()
-                                            <= n_order)
-                                {
-                                    let gain = sim_microphone(&rp_plus_rm, &angle, &mtype)
-                                        * refl[0]
-                                        * refl[1]
-                                        * refl[2]
-                                        / (4.0 * PI * dist * cts);
+            if (fdist as usize) < n_samples
+                && (n_order == -1
+                    || (2 * mx - q).abs() + (2 * my - j).abs() + (2 * mz - k).abs() <= n_order)
+            {
+                let gain =
+                    sim_microphone(&rp_plus_rm, &angle, &mtype) * refl[0] * refl[1] * refl[2]
+                        / (4.0 * PI * dist * cts);
 
-                                    let mut lpi = vec![0.0; tw];
+                let mut lpi = vec![0.0; tw];
 
-                                    for (n, lpi) in lpi.iter_mut().enumerate() {
-                                        let t =
-                                            ((n as f64) - 0.5 * (tw as f64) + 1.0) - (dist - fdist);
-                                        *lpi = 0.5
-                                            * (1.0 + (2.0 * PI * t / (tw as f64)).cos())
-                                            * 2.0
-                                            * fc
-                                            * (2.0 * PI * fc * t).sinc();
-                                    }
+                for (n, lpi) in lpi.iter_mut().enumerate() {
+                    let t = ((n as f64) - 0.5 * (tw as f64) + 1.0) - (dist - fdist);
+                    *lpi = 0.5
+                        * (1.0 + (2.0 * PI * t / (tw as f64)).cos())
+                        * 2.0
+                        * fc
+                        * (2.0 * PI * fc * t).sinc();
+                }
 
-                                    let start_position = (fdist - (tw as f64 / 2.0) + 1.0) as usize;
+                let start_position = (fdist - (tw as f64 / 2.0) + 1.0) as usize;
 
-                                    for (imp, lpi) in imp[start_position..].iter_mut().zip(lpi) {
-                                        *imp += gain * lpi
-                                    }
-                                }
-                            }
-                        }
-                    }
+                for (imp, lpi) in imp[start_position..].iter_mut().zip(lpi) {
+                    *imp += gain * lpi
                 }
             }
         }
