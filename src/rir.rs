@@ -261,6 +261,8 @@ pub fn compute_rir(
 
 #[cfg(test)]
 mod tests {
+    use std::convert::identity;
+
     use crate::rir::*;
 
     #[test]
@@ -284,6 +286,6 @@ mod tests {
         assert!(imp
             .iter()
             .map(|inner| inner.iter().any(|&x| x > 0.0))
-            .all(|x| x))
+            .all(identity))
     }
 }
