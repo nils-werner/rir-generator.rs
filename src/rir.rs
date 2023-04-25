@@ -1,5 +1,5 @@
 use std::f64::consts::PI;
-use f64::EPSILON;
+use std::f64::EPSILON;
 
 #[derive(Debug, Clone)]
 pub enum MicrophoneType {
@@ -116,7 +116,7 @@ trait FloatSinc {
 
 impl FloatSinc for f64 {
     fn sinc(self) -> f64 {
-        let eps = EPSILON * self.sign();
+        let eps = EPSILON.copysign(self);
         (self + eps).sin() / (self + eps)
     }
 }
