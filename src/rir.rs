@@ -1,5 +1,6 @@
 use std::f64::consts::PI;
 use std::f64::EPSILON;
+use std::ops::Div;
 
 #[derive(Debug, Clone)]
 pub enum MicrophoneType {
@@ -10,15 +11,17 @@ pub enum MicrophoneType {
     Omnidirectional,
 }
 
-impl Into<f64> for MicrophoneType {
-    fn into(self) -> f64 {
-        match self {
+impl MicrophoneType {
+    fn adjust_gain(&self, gain: f64) -> f64 {
+        let rho = match self {
             Self::Bidirectional => 0.0,
             Self::Hypercardioid => 0.25,
             Self::Cardioid => 0.5,
             Self::Subcardioid => 0.75,
             Self::Omnidirectional => 1.0,
-        }
+        };
+
+        rho + (1.0 - rho) * gain
     }
 }
 
@@ -51,6 +54,25 @@ impl From<&[f64; 3]> for Position {
             x: x[0],
             y: x[1],
             z: x[2],
+        }
+    }
+}
+
+impl Position {
+    pub fn radius(&self) -> f64 {
+        (self.x.powi(2) + self.y.powi(2) + self.z.powi(2)).sqrt()
+    }
+}
+
+impl Div<f64> for &Position {
+    // The division of rational numbers is a closed operation.
+    type Output = Position;
+
+    fn div(self, rhs: f64) -> Self::Output {
+        Position {
+            x: self.x / rhs,
+            y: self.y / rhs,
+            z: self.z / rhs,
         }
     }
 }
@@ -121,17 +143,17 @@ impl FloatSinc for f64 {
     }
 }
 
-fn sim_microphone(p: &Position, a: &Angle, t: &MicrophoneType) -> f64 {
-    match t {
+fn sim_microphone(p: Position, recv: &Receiver) -> f64 {
+    match recv.microphone_type {
         MicrophoneType::Hypercardioid => 1.0,
         _ => {
-            let rho: f64 = t.clone().into();
-            let vartheta = (p.z / (p.x.powi(2) + p.y.powi(2) + p.z.powi(2)).sqrt()).acos();
-            let varphi = p.y.atan2(p.x);
+            let (vartheta, varphi) = ((p.z / p.radius()).acos(), p.y.atan2(p.x));
+            let Angle { theta, phi } = recv.angle;
 
-            let gain = (PI / 2.0 - a.theta).sin() * (vartheta).sin() * (a.phi - varphi).cos()
-                + (PI / 2.0 - a.theta).cos() * (vartheta).cos();
-            rho + (1.0 - rho) * gain
+            let gain = (PI / 2.0 - theta).sin() * vartheta.sin() * (phi - varphi).cos()
+                + (PI / 2.0 - theta).cos() * vartheta.cos();
+
+            recv.microphone_type.adjust_gain(gain)
         }
     }
 }
@@ -147,37 +169,16 @@ pub fn compute_rir(
     n_order: i64,
     enable_highpass_filter: bool,
 ) -> Vec<Vec<f64>> {
+    const FC: f64 = 0.5;
     // Temporary variables and constants (image-method)
-    let fc = 0.5; // The normalized cut-off frequency equals (fs/2) / fs = 0.5
     let tw = (2.0 * (0.004 * fs).round()) as usize; // The width of the low-pass FIR equals 8 ms
     let cts = c / fs;
     let mut imp = vec![vec![0.0; n_samples]; receivers.len()];
 
-    let source = Position {
-        x: source.x / cts,
-        y: source.y / cts,
-        z: source.z / cts,
-    };
-    let room = Room {
-        x: room.x / cts,
-        y: room.y / cts,
-        z: room.z / cts,
-    };
+    let (source, room) = (source / cts, room / cts);
 
-    for (
-        Receiver {
-            position: receiver,
-            microphone_type: mtype,
-            angle,
-        },
-        imp,
-    ) in receivers.iter().zip(imp.iter_mut())
-    {
-        let receiver = Position {
-            x: receiver.x / cts,
-            y: receiver.y / cts,
-            z: receiver.z / cts,
-        };
+    for (receiver, imp) in receivers.iter().zip(imp.iter_mut()) {
+        let scaled_receiver = &receiver.position / cts;
 
         let n1 = (n_samples as f64 / (2.0 * room.x)).ceil() as i64;
         let n2 = (n_samples as f64 / (2.0 * room.y)).ceil() as i64;
@@ -192,9 +193,9 @@ pub fn compute_rir(
             };
 
             let rp_plus_rm = Position {
-                x: (1 - 2 * q) as f64 * source.x - receiver.x + rm.x,
-                y: (1 - 2 * j) as f64 * source.y - receiver.y + rm.y,
-                z: (1 - 2 * k) as f64 * source.z - receiver.z + rm.z,
+                x: (1 - 2 * q) as f64 * source.x - scaled_receiver.x + rm.x,
+                y: (1 - 2 * j) as f64 * source.y - scaled_receiver.y + rm.y,
+                z: (1 - 2 * k) as f64 * source.z - scaled_receiver.z + rm.z,
             };
             let refl = [
                 beta.x[0].powi((mx - q).abs() as i32) * beta.x[1].powi((mx).abs() as i32),
@@ -202,15 +203,15 @@ pub fn compute_rir(
                 beta.z[0].powi((mz - k).abs() as i32) * beta.z[1].powi((mz).abs() as i32),
             ];
 
-            let dist = (rp_plus_rm.x.powi(2) + rp_plus_rm.y.powi(2) + rp_plus_rm.z.powi(2)).sqrt();
-            let fdist = (dist).floor();
+            let dist = rp_plus_rm.radius();
+            let fdist = dist.floor();
 
             if (fdist as usize) < n_samples
                 && (n_order == -1
                     || (2 * mx - q).abs() + (2 * my - j).abs() + (2 * mz - k).abs() <= n_order)
             {
                 let gain =
-                    sim_microphone(&rp_plus_rm, &angle, &mtype) * refl[0] * refl[1] * refl[2]
+                    sim_microphone(rp_plus_rm, receiver) * refl[0] * refl[1] * refl[2]
                         / (4.0 * PI * dist * cts);
 
                 let mut lpi = vec![0.0; tw];
@@ -220,8 +221,8 @@ pub fn compute_rir(
                     *lpi = 0.5
                         * (1.0 + (2.0 * PI * t / (tw as f64)).cos())
                         * 2.0
-                        * fc
-                        * (2.0 * PI * fc * t).sinc();
+                        * FC
+                        * (2.0 * PI * FC * t).sinc();
                 }
 
                 let start_position = (fdist - (tw as f64 / 2.0) + 1.0) as usize;
