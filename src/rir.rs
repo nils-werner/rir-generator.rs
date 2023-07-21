@@ -1,5 +1,6 @@
 use std::f64::consts::PI;
 use std::f64::EPSILON;
+use ndarray;
 
 #[derive(Debug, Clone)]
 pub enum MicrophoneType {
@@ -146,12 +147,12 @@ pub fn compute_rir(
     n_samples: usize,
     n_order: i64,
     enable_highpass_filter: bool,
-) -> Vec<Vec<f64>> {
+) -> ndarray::Array2<f64> {
     // Temporary variables and constants (image-method)
     let fc = 0.5; // The normalized cut-off frequency equals (fs/2) / fs = 0.5
     let tw = (2.0 * (0.004 * fs).round()) as usize; // The width of the low-pass FIR equals 8 ms
     let cts = c / fs;
-    let mut imp = vec![vec![0.0; n_samples]; receivers.len()];
+    let mut imp = ndarray::Array2::<f64>::zeros((receivers.len(), n_samples));
 
     let source = Position {
         x: source.x / cts,
@@ -170,8 +171,8 @@ pub fn compute_rir(
             microphone_type: mtype,
             angle,
         },
-        imp,
-    ) in receivers.iter().zip(imp.iter_mut())
+        mut imp,
+    ) in receivers.iter().zip(imp.axis_iter_mut(ndarray::Axis(0)))
     {
         let receiver = Position {
             x: receiver.x / cts,
@@ -213,7 +214,7 @@ pub fn compute_rir(
                     sim_microphone(&rp_plus_rm, &angle, &mtype) * refl[0] * refl[1] * refl[2]
                         / (4.0 * PI * dist * cts);
 
-                let mut lpi = vec![0.0; tw];
+                let mut lpi = ndarray::Array::zeros(tw);
 
                 for (n, lpi) in lpi.iter_mut().enumerate() {
                     let t = ((n as f64) - 0.5 * (tw as f64) + 1.0) - (dist - fdist);
@@ -226,7 +227,7 @@ pub fn compute_rir(
 
                 let start_position = (fdist - (tw as f64 / 2.0) + 1.0) as usize;
 
-                for (imp, lpi) in imp[start_position..].iter_mut().zip(lpi) {
+                for (imp, lpi) in imp.slice_mut(ndarray::s![start_position..]).iter_mut().zip(lpi) {
                     *imp += gain * lpi
                 }
             }
@@ -242,7 +243,7 @@ pub fn compute_rir(
         let b2 = -r1 * r1;
         let a1 = -(1.0 + r1);
 
-        for imp in imp.iter_mut() {
+        for mut imp in imp.axis_iter_mut(ndarray::Axis(0)) {
             let mut y = [0.0; 3];
 
             for x0 in imp.iter_mut() {
@@ -259,8 +260,6 @@ pub fn compute_rir(
 
 #[cfg(test)]
 mod tests {
-    use std::convert::identity;
-
     use crate::rir::*;
 
     #[test]
@@ -281,9 +280,6 @@ mod tests {
             true,
         );
 
-        assert!(imp
-            .iter()
-            .map(|inner| inner.iter().any(|&x| x > 0.0))
-            .all(identity))
+        assert!(imp.into_iter().any(|x| x > 0.0))
     }
 }
