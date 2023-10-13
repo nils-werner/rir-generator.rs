@@ -2,4 +2,5 @@
 
 members = [
     "rir_generator",
+    "rir_generator_py",
 ]
