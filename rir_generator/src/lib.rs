@@ -1,9 +1,9 @@
 #[macro_use]
 extern crate itertools;
 
+use ndarray;
 use std::f64::consts::PI;
 use std::f64::EPSILON;
-use ndarray;
 
 #[derive(Debug, Clone)]
 pub enum MicrophoneType {
@@ -26,8 +26,10 @@ impl Into<f64> for MicrophoneType {
     }
 }
 
+pub struct InvalidMicrophoneCharError {}
+
 impl TryFrom<char> for MicrophoneType {
-    type Error = &'static str;
+    type Error = InvalidMicrophoneCharError;
 
     fn try_from(x: char) -> Result<Self, Self::Error> {
         match x {
@@ -36,7 +38,7 @@ impl TryFrom<char> for MicrophoneType {
             'c' => Ok(Self::Cardioid),
             's' => Ok(Self::Subcardioid),
             'o' => Ok(Self::Omnidirectional),
-            _ => Err("Invalid character given"),
+            _ => Err(InvalidMicrophoneCharError {}),
         }
     }
 }
@@ -51,6 +53,16 @@ pub type Room = Position;
 
 impl From<&[f64; 3]> for Position {
     fn from(x: &[f64; 3]) -> Position {
+        Position {
+            x: x[0],
+            y: x[1],
+            z: x[2],
+        }
+    }
+}
+
+impl From<Vec<f64>> for Position {
+    fn from(x: Vec<f64>) -> Position {
         Position {
             x: x[0],
             y: x[1],
@@ -86,6 +98,16 @@ impl From<&[f64; 6]> for Betas {
     }
 }
 
+impl From<Vec<f64>> for Betas {
+    fn from(x: Vec<f64>) -> Betas {
+        Betas {
+            x: [x[0], x[1]],
+            y: [x[2], x[3]],
+            z: [x[4], x[5]],
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Angle {
     pub phi: f64,
@@ -100,6 +122,15 @@ impl From<f64> for Angle {
 
 impl From<&[f64; 2]> for Angle {
     fn from(x: &[f64; 2]) -> Angle {
+        Angle {
+            phi: x[0],
+            theta: x[1],
+        }
+    }
+}
+
+impl From<Vec<f64>> for Angle {
+    fn from(x: Vec<f64>) -> Angle {
         Angle {
             phi: x[0],
             theta: x[1],
@@ -230,7 +261,11 @@ pub fn compute_rir(
 
                 let start_position = (fdist - (tw as f64 / 2.0) + 1.0) as usize;
 
-                for (imp, lpi) in imp.slice_mut(ndarray::s![start_position..]).iter_mut().zip(lpi) {
+                for (imp, lpi) in imp
+                    .slice_mut(ndarray::s![start_position..])
+                    .iter_mut()
+                    .zip(lpi)
+                {
                     *imp += gain * lpi
                 }
             }

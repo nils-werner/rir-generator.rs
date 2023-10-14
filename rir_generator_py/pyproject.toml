@@ -11,6 +11,14 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
 dynamic = ["version"]
+dependencies = [
+    "numpy",
+]
+
+[project.optional-dependencies]
+tests = [
+    "pytest",
+]
 
 [tool.maturin]
 python-source = "python"
