@@ -1,7 +1,7 @@
 use numpy::{IntoPyArray, PyArray2};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
-use rir_generator;
+use rir_generator::{self, InvalidMicrophoneCharError};
 
 /// Formats the sum of two numbers as string.
 #[pyfunction]
@@ -23,11 +23,10 @@ fn compute_rir(
     n_samples: usize,
     n_order: i64,
     enable_highpass_filter: bool,
-) -> PyResult<&PyArray2<f64>> {
+) -> Result<&PyArray2<f64>, MyInvalidMicrophoneCharError> {
     let receiver = rir_generator::Receiver {
         position: rir_generator::Position::from(receiver),
-        microphone_type: rir_generator::MicrophoneType::try_from(microphone)
-            .map_err(|_| PyValueError::new_err("Invalid Microphone Type given"))?,
+        microphone_type: rir_generator::MicrophoneType::try_from(microphone)?,
         angle: rir_generator::Angle::from(angle),
     };
 
@@ -51,4 +50,17 @@ fn rir_generator_py(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(sum_as_string, m)?)?;
     m.add_function(wrap_pyfunction!(compute_rir, m)?)?;
     Ok(())
+}
+struct MyInvalidMicrophoneCharError(InvalidMicrophoneCharError);
+
+impl From<MyInvalidMicrophoneCharError> for PyErr {
+    fn from(_: MyInvalidMicrophoneCharError) -> Self {
+        PyValueError::new_err("Incorrect microphone character")
+    }
+}
+
+impl From<InvalidMicrophoneCharError> for MyInvalidMicrophoneCharError {
+    fn from(other: InvalidMicrophoneCharError) -> Self {
+        Self(other)
+    }
 }
