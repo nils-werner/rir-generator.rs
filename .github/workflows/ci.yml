@@ -1,4 +1,4 @@
-name: Cargo Build & Test
+name: Cargo/Maturin Build & Test
 
 on:
   push:
@@ -9,7 +9,7 @@ env:
 
 jobs:
   build_and_test:
-    name: Rust project - latest
+    name: Build/Test Rust
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -22,3 +22,30 @@ jobs:
       - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
       - run: cargo build --verbose
       - run: cargo test --verbose
+
+  linux:
+    name: Build/Test Python
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [x86_64, x86, aarch64, armv7, s390x, ppc64le]
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - name: Install develop
+        uses: PyO3/maturin-action@v1
+        with:
+          command: develop --extras tests
+      - name: Run Pytest
+        run: |
+          pytest
+      - name: Build wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.target }}
+          command: build
+          args: --release --out dist --find-interpreter
+          sccache: 'true'
+          manylinux: auto
