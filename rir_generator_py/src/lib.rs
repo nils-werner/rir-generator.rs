@@ -1,7 +1,7 @@
 use numpy::{IntoPyArray, PyArray2};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
-use rir_generator::{self, BadCharError};
+use rir_generator;
 
 /// Formats the sum of two numbers as string.
 #[pyfunction]
