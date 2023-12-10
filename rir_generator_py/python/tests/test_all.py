@@ -30,4 +30,5 @@ def test_nothing():
         hp_filter=True,
     )
 
+    assert np.allclose(imp.shape, reference.shape)
     assert np.allclose(imp, reference)

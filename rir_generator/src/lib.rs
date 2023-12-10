@@ -205,7 +205,7 @@ pub fn compute_rir(
     let fc = 0.5; // The normalized cut-off frequency equals (fs/2) / fs = 0.5
     let tw = (2.0 * (0.004 * fs).round()) as usize; // The width of the low-pass FIR equals 8 ms
     let cts = c / fs;
-    let mut imp = ndarray::Array2::<f64>::zeros((receivers.len(), n_samples));
+    let mut imp = ndarray::Array2::<f64>::zeros((n_samples, receivers.len()));
 
     let source = Position {
         x: source.x / cts,
@@ -225,7 +225,7 @@ pub fn compute_rir(
             angle,
         },
         mut imp,
-    ) in receivers.iter().zip(imp.axis_iter_mut(ndarray::Axis(0)))
+    ) in receivers.iter().zip(imp.axis_iter_mut(ndarray::Axis(1)))
     {
         let receiver = Position {
             x: receiver.x / cts,
