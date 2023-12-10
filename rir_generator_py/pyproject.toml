@@ -18,6 +18,7 @@ dependencies = [
 [project.optional-dependencies]
 tests = [
     "pytest",
+    "rir_generator @ git+https://github.com/audiolabs/rir-generator.git",
 ]
 
 [tool.maturin]

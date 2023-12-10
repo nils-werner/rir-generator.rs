@@ -1,5 +1,6 @@
 import numpy as np
 import rir_generator_py
+import rir_generator
 
 def test_nothing():
     imp = rir_generator_py.compute_rir(
@@ -16,4 +17,17 @@ def test_nothing():
         enable_highpass_filter=True,
     );
 
-    assert np.any(imp > 0.0)
+    reference = rir_generator.generate(
+        c=340.0,
+        fs=16000.0,
+        r=[2.0, 1.5, 2.0],
+        mtype=rir_generator.mtype.omnidirectional,
+        s=[2.0, 3.5, 2.0],
+        L=[5.0, 4.0, 6.0],
+        beta=[0.4] * 6,
+        nsample=4096,
+        order=-1,
+        hp_filter=True,
+    )
+
+    assert np.allclose(imp, reference)
