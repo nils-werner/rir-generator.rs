@@ -33,7 +33,7 @@ fn compute_rir(
         &rir_generator::Room::from(room),
         &rir_generator::Betas::from(beta),
         n_samples,
-        n_order,
+        rir_generator::FilterOrder::from(n_order),
         enable_highpass_filter,
     )
     .into_pyarray(_py))

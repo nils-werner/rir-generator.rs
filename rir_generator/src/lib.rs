@@ -150,6 +150,20 @@ pub struct Receiver {
     pub angle: Angle,
 }
 
+pub enum FilterOrder {
+    Any,
+    Fixed(i64),
+}
+
+impl From<i64> for FilterOrder {
+    fn from(value: i64) -> FilterOrder {
+        match value {
+            -1 => FilterOrder::Any,
+            value => FilterOrder::Fixed(value),
+        }
+    }
+}
+
 trait FloatSinc {
     fn sinc(self) -> f64;
 }
@@ -184,7 +198,7 @@ pub fn compute_rir(
     room: &Room,
     beta: &Betas,
     n_samples: usize,
-    n_order: i64,
+    n_order: FilterOrder,
     enable_highpass_filter: bool,
 ) -> ndarray::Array2<f64> {
     // Temporary variables and constants (image-method)
@@ -245,10 +259,12 @@ pub fn compute_rir(
             let dist = (rp_plus_rm.x.powi(2) + rp_plus_rm.y.powi(2) + rp_plus_rm.z.powi(2)).sqrt();
             let fdist = (dist).floor();
 
-            if (fdist as usize) < n_samples
-                && (n_order == -1
-                    || (2 * mx - q).abs() + (2 * my - j).abs() + (2 * mz - k).abs() <= n_order)
-            {
+            let run_block = match n_order {
+                FilterOrder::Any => true,
+                FilterOrder::Fixed(n) => (2 * mx - q).abs() + (2 * my - j).abs() + (2 * mz - k).abs() <= n,
+            };
+
+            if run_block && (fdist as usize) < n_samples {
                 let gain =
                     sim_microphone(&rp_plus_rm, &angle, &mtype) * refl[0] * refl[1] * refl[2]
                         / (4.0 * PI * dist * cts);
@@ -319,7 +335,7 @@ mod tests {
             &Room::from(&[5.0, 4.0, 6.0]),
             &Betas::from(0.4),
             4096,
-            -1,
+            FilterOrder::Any,
             true,
         );
 
