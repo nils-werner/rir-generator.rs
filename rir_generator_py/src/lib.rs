@@ -3,12 +3,6 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use rir_generator;
 
-/// Formats the sum of two numbers as string.
-#[pyfunction]
-fn sum_as_string(a: usize, b: usize) -> PyResult<String> {
-    Ok((a + b).to_string())
-}
-
 #[pyfunction]
 fn compute_rir(
     _py: Python,
@@ -48,7 +42,6 @@ fn compute_rir(
 /// A Python module implemented in Rust.
 #[pymodule]
 fn rir_generator_py(_py: Python, m: &PyModule) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(sum_as_string, m)?)?;
     m.add_function(wrap_pyfunction!(compute_rir, m)?)?;
     Ok(())
 }

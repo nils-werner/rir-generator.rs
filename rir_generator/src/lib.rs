@@ -2,9 +2,9 @@
 extern crate itertools;
 
 use ndarray;
+use thiserror::Error;
 use std::f64::consts::PI;
 use std::f64::EPSILON;
-use std::fmt;
 
 #[derive(Debug, Clone)]
 pub enum MicrophoneType {
@@ -27,21 +27,14 @@ impl Into<f64> for MicrophoneType {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct BadCharError {
-    pub char: char,
-}
-
-impl std::error::Error for BadCharError {}
-
-impl fmt::Display for BadCharError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Incorrect microphone character {}", self.char)
-    }
+#[derive(Error, Debug)]
+pub enum MicrophoneTypeError {
+    #[error("Incorrect microphone character {0}")]
+    BadCharError(char)
 }
 
 impl TryFrom<char> for MicrophoneType {
-    type Error = BadCharError;
+    type Error = MicrophoneTypeError;
 
     fn try_from(x: char) -> Result<Self, Self::Error> {
         match x {
@@ -50,7 +43,7 @@ impl TryFrom<char> for MicrophoneType {
             'c' => Ok(Self::Cardioid),
             's' => Ok(Self::Subcardioid),
             'o' => Ok(Self::Omnidirectional),
-            _ => Err(BadCharError { char: x }),
+            _ => Err(Self::Error::BadCharError(x)),
         }
     }
 }
