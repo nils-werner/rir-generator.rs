@@ -10,7 +10,7 @@ def hp_filter(request):
 
 
 def test_nothing(hp_filter):
-    imp = rir_generator_py.compute_rir(
+    imp = rir_generator_py.generate(
         c=340.0,
         fs=16000.0,
         receiver=[2.0, 1.5, 2.0],

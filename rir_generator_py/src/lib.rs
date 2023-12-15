@@ -4,7 +4,7 @@ use pyo3::prelude::*;
 use rir_generator;
 
 #[pyfunction]
-fn compute_rir(
+fn generate(
     _py: Python,
     c: f64,
     fs: f64,
@@ -42,6 +42,6 @@ fn compute_rir(
 /// A Python module implemented in Rust.
 #[pymodule]
 fn rir_generator_py(_py: Python, m: &PyModule) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(compute_rir, m)?)?;
+    m.add_function(wrap_pyfunction!(generate, m)?)?;
     Ok(())
 }
