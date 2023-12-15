@@ -177,7 +177,7 @@ impl FloatSinc for f64 {
 
 fn sim_microphone(p: &Position, a: &Angle, t: &MicrophoneType) -> f64 {
     match t {
-        MicrophoneType::Hypercardioid => 1.0,
+        MicrophoneType::Omnidirectional => 1.0,
         _ => {
             let rho: f64 = t.clone().into();
             let vartheta = (p.z / (p.x.powi(2) + p.y.powi(2) + p.z.powi(2)).sqrt()).acos();
@@ -287,7 +287,7 @@ pub fn compute_rir(
                     .iter_mut()
                     .zip(lpi)
                 {
-                    *imp += gain * lpi
+                    *imp += gain * lpi;
                 }
             }
         }
@@ -297,12 +297,12 @@ pub fn compute_rir(
         // 'Original' high-pass filter as proposed by Allen and Berkley.
         // Temporary variables and constants (high-pass filter)
         let w = 2.0 * PI * 100.0 / fs; // The cut-off frequency equals 100 Hz
-        let r1 = -w.exp();
+        let r1 = (-w).exp();
         let b1 = 2.0 * r1 * w.cos();
         let b2 = -r1 * r1;
         let a1 = -(1.0 + r1);
 
-        for mut imp in imp.axis_iter_mut(ndarray::Axis(0)) {
+        for mut imp in imp.axis_iter_mut(ndarray::Axis(1)) {
             let mut y = [0.0; 3];
 
             for x0 in imp.iter_mut() {
