@@ -1,8 +1,8 @@
 use numpy::{IntoPyArray, PyArray2};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
-use rir_generator;
 
+#[allow(clippy::too_many_arguments)]
 #[pyfunction]
 fn generate(
     _py: Python,

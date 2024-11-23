@@ -1,7 +1,6 @@
 #[macro_use]
 extern crate itertools;
 
-use ndarray;
 use std::f64::consts::PI;
 use std::f64::EPSILON;
 use thiserror::Error;
@@ -15,14 +14,14 @@ pub enum MicrophoneType {
     Omnidirectional,
 }
 
-impl Into<f64> for MicrophoneType {
-    fn into(self) -> f64 {
-        match self {
-            Self::Bidirectional => 0.0,
-            Self::Hypercardioid => 0.25,
-            Self::Cardioid => 0.5,
-            Self::Subcardioid => 0.75,
-            Self::Omnidirectional => 1.0,
+impl From<MicrophoneType> for f64 {
+    fn from(val: MicrophoneType) -> f64 {
+        match val {
+            MicrophoneType::Bidirectional => 0.0,
+            MicrophoneType::Hypercardioid => 0.25,
+            MicrophoneType::Cardioid => 0.5,
+            MicrophoneType::Subcardioid => 0.75,
+            MicrophoneType::Omnidirectional => 1.0,
         }
     }
 }
@@ -190,6 +189,7 @@ fn sim_microphone(p: &Position, a: &Angle, t: &MicrophoneType) -> f64 {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn compute_rir(
     c: f64,
     fs: f64,
@@ -267,9 +267,8 @@ pub fn compute_rir(
             };
 
             if run_block && (fdist as usize) < n_samples {
-                let gain =
-                    sim_microphone(&rp_plus_rm, &angle, &mtype) * refl[0] * refl[1] * refl[2]
-                        / (4.0 * PI * dist * cts);
+                let gain = sim_microphone(&rp_plus_rm, angle, mtype) * refl[0] * refl[1] * refl[2]
+                    / (4.0 * PI * dist * cts);
 
                 let mut lpi = ndarray::Array::zeros(tw);
 
