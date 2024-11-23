@@ -2,9 +2,9 @@
 extern crate itertools;
 
 use ndarray;
-use thiserror::Error;
 use std::f64::consts::PI;
 use std::f64::EPSILON;
+use thiserror::Error;
 
 #[derive(Debug, Clone)]
 pub enum MicrophoneType {
@@ -30,7 +30,7 @@ impl Into<f64> for MicrophoneType {
 #[derive(Error, Debug)]
 pub enum MicrophoneTypeError {
     #[error("Incorrect microphone character {0}")]
-    BadCharError(char)
+    BadCharError(char),
 }
 
 impl TryFrom<char> for MicrophoneType {
@@ -261,7 +261,9 @@ pub fn compute_rir(
 
             let run_block = match n_order {
                 FilterOrder::Any => true,
-                FilterOrder::Fixed(n) => (2 * mx - q).abs() + (2 * my - j).abs() + (2 * mz - k).abs() <= n,
+                FilterOrder::Fixed(n) => {
+                    (2 * mx - q).abs() + (2 * my - j).abs() + (2 * mz - k).abs() <= n
+                }
             };
 
             if run_block && (fdist as usize) < n_samples {
