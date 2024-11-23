@@ -19,21 +19,21 @@ fn generate(
     enable_highpass_filter: bool,
 ) -> PyResult<&PyArray2<f64>> {
     let receiver = rir_generator::Receiver {
-        position: rir_generator::Position::from(receiver),
+        position: receiver.into(),
         microphone_type: rir_generator::MicrophoneType::try_from(microphone)
             .map_err(|error| PyValueError::new_err(error.to_string()))?,
-        angle: rir_generator::Angle::from(angle),
+        angle: angle.into(),
     };
 
     Ok(rir_generator::compute_rir(
         c,
         fs,
         &[receiver],
-        &rir_generator::Position::from(source),
-        &rir_generator::Room::from(room),
-        &rir_generator::Betas::from(beta),
+        &source.into(),
+        &room.into(),
+        &beta.into(),
         n_samples,
-        rir_generator::FilterOrder::from(n_order),
+        n_order.into(),
         enable_highpass_filter,
     )
     .into_pyarray(_py))
