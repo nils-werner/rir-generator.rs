@@ -38,6 +38,7 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           command: build
+          args: -m rir_generator_py/Cargo.toml
       - name: Run Pytest
         run: |
           pytest
